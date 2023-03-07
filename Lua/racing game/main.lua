@@ -1,9 +1,21 @@
 function love.load()
+    
+    cam = require "camera"
+    cam = cam.new(0,0,0.75)
+
+    camera = {
+        zoom = 1,
+        buffer = "null"
+    }
     gameSettings = {
         shaders = {
             1,
             0,
-        }
+        },
+        cam = {
+            rotate = false
+        },
+        buffer = "null"
     }
 
     sprites = {
@@ -19,6 +31,8 @@ function love.load()
         gb = love.graphics.newImage("Sprites/r10.png"),
         pb = love.graphics.newImage("Sprites/r11.png"),
         kb = love.graphics.newImage("Sprites/r12.png"),
+        grid = love.graphics.newImage("Sprites/grid bg.png"),
+        gridQuad = love.graphics.newQuad(-2000,-2000,4000,4000,256,256),
         buffer = "null"
     }
 
@@ -26,7 +40,7 @@ function love.load()
         amount = 0.25,
         sens = 0.01
     }
-
+    
     player1 = {
         -- dynamic vars
         x_vel = 0,
@@ -38,7 +52,7 @@ function love.load()
         speedUp = 0,
         drift = false,
         driftAmount = drift.amount,
-
+        
         -- static vars
         size = 20,
         acceleration = 1.1,
@@ -46,17 +60,24 @@ function love.load()
         turnSens = 2,
         sprite = sprites.r
     }
-
-
+    
+    
     heatSettings = {
         cc = 100,
         map = {
-          -- all arrays are formated as follows
-          -- start X, start Y, image texture, ...
-            {100,100,"maps/matrix.png"}
+            -- all arrays are formated as follows
+            -- start X, start Y, image texture, ...
+            test = {
+                startPos = {100,100},
+                image = love.graphics.newImage("maps/test track.png"),
+                buffer = "null"
+            },
+            buffer = "null"
         },
         ai = false,
     }
+    
+    sprites.grid:setWrap("repeat","repeat")
 
     pi = 3.14159265359
     fps = 0
@@ -67,7 +88,7 @@ end
 
 -- START THE GAME --
 function heatStart(map)
-
+    
 end
 
 -- QUITTING THE GAME --
@@ -88,6 +109,7 @@ function control()
     if love.keyboard.isDown('a') then
         player1.angle = player1.angle - player1.turnSens
     end
+
     if love.keyboard.isDown('w') then
         player1.speedUp = player1.speedUp + player1.acceleration
         player1.speed = math.log(player1.speedUp * (heatSettings.cc/100))
@@ -95,6 +117,13 @@ function control()
         player1.speed = player1.speed / player1.deceleration
         player1.speedUp = 0
     end
+
+    if love.keyboard.isDown('s') then
+        if player1.speed > -1 * (heatSettings.cc/50) then
+            player1.speed = ((1 + player1.speed) / (player1.deceleration * 1.2)) - 1
+        end
+    end
+
     if love.keyboard.isDown('lshift') then
         player1.drift = true
     else
@@ -139,24 +168,35 @@ function love.update(dt)
     -- functions --
     control()
     debugger()
+    cam:lookAt(player1.x_pos,player1.y_pos)
+    cam:zoomTo(camera.zoom)
+    if gameSettings.cam.rotate then
+        cam:rotateTo(-((player1.angle+90)*pi)/180)
+    end
 end
 
 -- DRAWS EVERY FRAME --
 function love.draw()
-    -- fps --
-    love.graphics.print("FPS: "..fps,0,0)
+    
+    cam:attach()
+    -- bg --
+    love.graphics.draw(sprites.grid,sprites.gridQuad,-2000,-2000,0,1,1)
+    love.graphics.draw(heatSettings.map.test.image,-2000,-2000,0,1,1)
     
     -- player 1 --
     love.graphics.draw(
         player1.sprite,
-        player1.x_pos + 100,
-        player1.y_pos + 100,
-        ((player1.angle-90)*pi)/180, --default player1.angle
-        player1.size/100, --default 180
-        player1.size/100, --default 180
+        player1.x_pos,
+        player1.y_pos,
+        ((player1.angle-90)*pi)/180,
+        player1.size/100,
+        player1.size/100,
         player1.sprite:getWidth()/2,
         player1.sprite:getHeight()/2
     )
+    cam:detach()
+
+    love.graphics.print("FPS: "..fps,0,0)
     love.graphics.print("x_vel: "..player1.x_vel,0,20)
     love.graphics.print("y_vel: "..player1.y_vel,0,40)
     love.graphics.print("x_pos: "..player1.x_pos,0,60)
