@@ -6,16 +6,47 @@ function love.load()
         }
     }
 
+    sprites = {
+        r = love.graphics.newImage("Sprites/r1.png"),
+        b = love.graphics.newImage("Sprites/r2.png"),
+        y = love.graphics.newImage("Sprites/r3.png"),
+        g = love.graphics.newImage("Sprites/r4.png"),
+        p = love.graphics.newImage("Sprites/r5.png"),
+        k = love.graphics.newImage("Sprites/r6.png"),
+        rb = love.graphics.newImage("Sprites/r7.png"),
+        bb = love.graphics.newImage("Sprites/r8.png"),
+        yb = love.graphics.newImage("Sprites/r9.png"),
+        gb = love.graphics.newImage("Sprites/r10.png"),
+        pb = love.graphics.newImage("Sprites/r11.png"),
+        kb = love.graphics.newImage("Sprites/r12.png"),
+        buffer = "null"
+    }
+
+    drift = {
+        amount = 0.25,
+        sens = 0.01
+    }
+
     player1 = {
+        -- dynamic vars
         x_vel = 0,
         y_vel = 0,
         x_pos = 0,
         y_pos = 0,
         angle = 0,
-        size = 20,
         speed = 0,
-        sprite = love.graphics.newImage("Sprites/r1.png")
+        speedUp = 0,
+        drift = false,
+        driftAmount = drift.amount,
+
+        -- static vars
+        size = 20,
+        acceleration = 1.1,
+        deceleration = 1.02,
+        turnSens = 2,
+        sprite = sprites.r
     }
+
 
     heatSettings = {
         cc = 100,
@@ -27,11 +58,14 @@ function love.load()
         ai = false,
     }
 
+    pi = 3.14159265359
     fps = 0
     upSpeed = 0.1 -- how often the fps updates
     upElapsed = 0 -- will be added onto until larger than upSpeed and resets
+    test = 0
 end
 
+-- START THE GAME --
 function heatStart(map)
 
 end
@@ -47,9 +81,49 @@ end
 
 -- CONTROLLING THE PLAYERS --
 function control()
-    if love.keypressed("d") then
-        player1.angle = player1.angle - 1
-        player1.x_pos = player1.x_pos + 1
+    -- actual controlls
+    if love.keyboard.isDown('d') then
+        player1.angle = player1.angle + player1.turnSens
+    end
+    if love.keyboard.isDown('a') then
+        player1.angle = player1.angle - player1.turnSens
+    end
+    if love.keyboard.isDown('w') then
+        player1.speedUp = player1.speedUp + player1.acceleration
+        player1.speed = math.log(player1.speedUp * (heatSettings.cc/100))
+    else
+        player1.speed = player1.speed / player1.deceleration
+        player1.speedUp = 0
+    end
+    if love.keyboard.isDown('lshift') then
+        player1.drift = true
+    else
+        player1.drift = false
+    end
+    
+    if player1.drift then
+        player1.driftAmount = drift.sens
+        player1.sprite = sprites.rb
+    else
+        --                    modify                ((difference) * half of a modifier)
+        player1.driftAmount = player1.driftAmount - ((player1.driftAmount - drift.amount) * (0.5 * drift.sens))
+        player1.sprite = sprites.r
+    end
+
+    -- update direction
+    player1.x_vel = player1.x_vel - ((player1.x_vel - math.cos(((player1.angle)*pi)/180)) * player1.driftAmount)
+    player1.y_vel = player1.y_vel - ((player1.y_vel - math.sin(((player1.angle)*pi)/180)) * player1.driftAmount)
+    
+    -- move player
+    player1.x_pos = player1.x_pos + (player1.x_vel * player1.speed)
+    player1.y_pos = player1.y_pos + (player1.y_vel * player1.speed)
+end
+
+-- DEBUG CONTROLLS --
+function debugger()
+    if love.keyboard.isDown('r') then
+        player1.x_pos = 100
+        player1.y_pos = 100
     end
 end
 
@@ -61,8 +135,10 @@ function love.update(dt)
         fps = math.floor(1 / dt) -- get the frames per second
         upElapsed = 0
     end
+
+    -- functions --
     control()
-    player1.angle = player1.angle + 1
+    debugger()
 end
 
 -- DRAWS EVERY FRAME --
@@ -75,8 +151,18 @@ function love.draw()
         player1.sprite,
         player1.x_pos + 100,
         player1.y_pos + 100,
-        player1.angle, --default player1.angle
-        player1.size/18 --default 180
+        ((player1.angle-90)*pi)/180, --default player1.angle
+        player1.size/100, --default 180
+        player1.size/100, --default 180
+        player1.sprite:getWidth()/2,
+        player1.sprite:getHeight()/2
     )
-    love.graphics.print("Angle: "..player1.angle,100,0)
+    love.graphics.print("x_vel: "..player1.x_vel,0,20)
+    love.graphics.print("y_vel: "..player1.y_vel,0,40)
+    love.graphics.print("x_pos: "..player1.x_pos,0,60)
+    love.graphics.print("y_pos: "..player1.y_pos,0,80)
+    love.graphics.print("angle: "..player1.angle,0,100)
+    love.graphics.print("speed: "..player1.speed,0,120)
+    love.graphics.print("drift: "..tostring(player1.drift),0,140)
+    love.graphics.print("driftAmount: "..player1.driftAmount,0,160)
 end
