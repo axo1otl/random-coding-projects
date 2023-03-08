@@ -4,48 +4,53 @@ debug = true
 function love.load() 
     cam = require "camera"
     cam = cam.new(0,0,0.75)
+    null = {}
+    warning = ""
 
     
     camera = {
         zoom = 1,
-        buffer = "null"
+        rotate = false,
+        buffer = null
     }
 
-    heatSettings = {
-        cc = 100,
-        map = {
-            test = {
-                startPos = {-480,-1380},
-                image = love.graphics.newImage("maps/test track.png"),
-                trackData = love.image.newImageData("maps/test track.png"),
-                checkScore = 0,
-                buffer = "null"
+    tracks = {
+        test = {
+            startPos = {
+                x = -480,
+                y = -1380,
+                buffer = null
             },
-            test2 = {
-                startPos = {-550,-1250},
-                image = love.graphics.newImage("maps/test 2.png"),
-                trackData = love.image.newImageData("maps/test 2.png"),
-                checkScore = 5,
-                buffer = "null"
+            image = love.graphics.newImage("maps/test track.png"),
+            trackData = love.image.newImageData("maps/test track.png"),
+            checkScore = 0,
+            buffer = null
+        },
+        tight = {
+            name = "tight corners",
+            startPos = {
+                x = -550,
+                y = -1250,
+            buffer = null
             },
-            buffer = "null"
+            image = love.graphics.newImage("maps/test 2.png"),
+            trackData = love.image.newImageData("maps/test 2.png"),
+            checkScore = 5,
+            buffer = null
         },
-        ai = false,
-        mode = 1, -- 0: normal | 1: drift | 2: ???
-        buffer = "null"
-    }
-
-    gameSettings = {
-        shaders = {
-            1,
-            0,
+        drift = {
+            name = "drift city",
+            startPos = {
+                x = -550,
+                y = -1250,
+            buffer = null
+            },
+            image = love.graphics.newImage("maps/test 2.png"),
+            trackData = love.image.newImageData("maps/test 2.png"),
+            checkScore = 5,
+            buffer = null
         },
-        cam = {
-            rotate = false
-        },
-        track = heatSettings.map.test2,
-        scene = 0, -- 0: Title screen | 1: settings | 2: game | 3: pause | 4: score table
-        buffer = "null"
+        buffer = null
     }
 
     sprites = {
@@ -63,7 +68,21 @@ function love.load()
         kb = love.graphics.newImage("Sprites/r12.png"),
         grid = love.graphics.newImage("Sprites/grid bg.png"),
         gridQuad = love.graphics.newQuad(-2000,-2000,4000,4000,256,256),
-        buffer = "null"
+        buffer = null
+    }
+
+    heatSettings = {
+        cc = 100,
+        map = tracks.drift,
+        ai = false,
+        mode = 1, -- 0: normal | 1: drift | 2: ???
+        buffer = null
+    }
+
+    gameSettings = {
+        scene = 0,  -- 0: menu | 1: settings | 2: game | 3: pause | 4: post-game | 5: pre-game
+                    -- 0: menu | 1: pre-game | 2: game | 3: post-game | 4: pause | 5: settings
+        buffer = null
     }
 
     drift = {
@@ -82,7 +101,7 @@ function love.load()
         speedUp = 0,
         drift = false,
         driftAmount = drift.amount,
-        on = gameSettings.track.trackData:getPixel(2000,2000),
+        on = heatSettings.map.trackData:getPixel(2000,2000),
         check = 0,
         
         -- static vars
@@ -91,8 +110,13 @@ function love.load()
         deceleration = 1.02,
         turnSens = 1.5,
         load = true,
-        sprite = sprites.r,
-        buffer = "null"
+        sprite = {
+            a = 0,
+            n = sprites.r,
+            b = sprites.rb,
+            buffer = null
+        },
+        buffer = null
     }
 
     time = {
@@ -104,8 +128,30 @@ function love.load()
             l2 = 0,
             l3 = 0,
             l4 = 0,
-            l5 = 0},
-        buffer = "null",
+            l5 = 0
+        },
+        buffer = null,
+    }
+
+    settingsMenu = {
+    -- this works by ints (0,1,2...) when the menu screen is loaded, these settings 
+    -- will apply navigate through the settings with 'w' and 's' keys and an 
+    -- "active" modifier for 'a' and 'd' keys
+        -- CAMERA --
+        -- zoom
+        -- rotate
+        -- SHADERS --
+        -- bloom
+        -- pixelate
+        -- HEAT --
+        -- cc
+        -- sprite + boost sprite (display the images too)
+        -- mode
+        -- HANDLING --
+        -- turnSens
+        -- 
+
+        buffer = null
     }
     
     sprites.grid:setWrap("repeat","repeat")
@@ -121,8 +167,8 @@ end
 -- CONTROLLING THE PLAYERS --
 function control()
     if p1.load then
-        p1.x_pos = gameSettings.track.startPos[1]
-        p1.y_pos = gameSettings.track.startPos[2]
+        p1.x_pos = heatSettings.map.startPos.x
+        p1.y_pos = heatSettings.map.startPos.y
         p1.load = false
     end
     -- actual controls
@@ -155,11 +201,11 @@ function control()
     
     if p1.drift then
         p1.driftAmount = drift.sens
-        p1.sprite = sprites.rb
+        p1.sprite.a = p1.sprite.b
     else
         --                    modify                ((difference) * half of a modifier)
         p1.driftAmount = p1.driftAmount - ((p1.driftAmount - drift.amount) * (0.5 * drift.sens))
-        p1.sprite = sprites.r
+        p1.sprite.a = p1.sprite.n
     end
 
     -- update direction
@@ -185,21 +231,22 @@ function menu()
     cam:lookAt(100,100)
     cam:zoomTo(camera.zoom)
     if love.keyboard.isDown('space') then
-        gameSettings.scene = 2
-    end
-    if love.keyboard.isDown('return') then
         gameSettings.scene = 1
     end
+    if love.keyboard.isDown('return') then
+        gameSettings.scene = 5
+    end
+end
+
+function preGame()
+    gameSettings.scene = 2
 end
 
 function settings()
-    -- idk
+    -- settings 
 end
 
 function game()
-    if love.keyboard.isDown('escape') then
-        gameSettings.scene = 0
-    end
     cam:lookAt(p1.x_pos,p1.y_pos)
 
     time.lap = time.lap + upElapsed
@@ -212,8 +259,8 @@ function game()
 
     -- laps --
     if p1.on == 0.2 then
-        if p1.check < gameSettings.track.checkScore and p1.check > 2 * gameSettings.track.checkScore then
-            time.out = time.out * 2
+        if not p1.check == heatSettings.map.trackData then
+            warning = "Missed "..(heatSettings.map.trackData - p1.check).." checkpoints"
         end
         time.total = time.total + time.lap + time.out * 4
         
@@ -227,7 +274,7 @@ function game()
             time.laps.l4 = time.lap + time.out * 4
         elseif time.laps.l5 == 0 then
             time.laps.l5 = time.lap + time.out * 4
-            gameSettings.scene = 4
+            gameSettings.scene = 3
         end
     
         time.lap = 0
@@ -274,33 +321,83 @@ function game()
         end
     end
     if p1.on*255 == 58 then
-        p1.check = 7
+        if p1.check == 6 then
+            p1.check = 7
+        end
     end
     if p1.on*255 == 59 then
-        p1.check = 8
+        if p1.check == 7 then
+            p1.check = 8
+        end
     end
     if p1.on*255 == 60 then
-        p1.check = 9
+        if p1.check == 8 then
+            p1.check = 9
+        end
     end
     if p1.on*255 == 61 then
-        p1.check = 10
+        if p1.check == 9 then
+            p1.check = 10
+        end
+    end
+    if p1.on*255 == 62 then
+        if p1.check == 10 then
+            p1.check = 11
+        end
+    end
+    if p1.on*255 == 63 then
+        if p1.check == 11 then
+            p1.check = 12
+        end
+    end
+    if p1.on*255 == 64 then
+        if p1.check == 12 then
+            p1.check = 13
+        end
+    end
+    if p1.on*255 == 65 then
+        if p1.check == 13 then
+            p1.check = 14
+        end
+    end
+    if p1.on*255 == 66 then
+        if p1.check == 14 then
+            p1.check = 15
+        end
+    end
+    if p1.on*255 == 67 then
+        if p1.check == 15 then
+            p1.check = 16
+        end
     end
 
 end
 
 function pause()
     if love.keyboard.isDown('escape') then
-        gameSettings.scene = 2
+        gameSettings.scene = 2 -- go to game
     end 
 end
 
 function love.keypressed(key, scancode, isrepeat)
     if key == "escape" then
-        if gameSettings.scene == 0 then 
-            love.event.quit()
+        if gameSettings.scene == 0 then -- if in menu
+            love.event.quit()           -- quit game
         end
-        if gameSettings.scene == 2 then
-            gameSettings.scene = 0
+        if gameSettings == 5 then       -- if in settings
+            gameSettings = 0            -- go to menu
+        end
+        if gameSettings.scene == 2 then -- if in game
+            gameSettings.scene = 4      -- pause
+        end
+        if gameSettings == 4 then       -- if paused
+            gameSettings.scene = 2      -- unpause
+        end
+        if gameSettings.scene == 1 then -- if in pre-game
+            gameSettings.scene = 0      -- go to menu
+        end
+        if gameSettings.scene == 3 then -- if in post-game
+            gameSettings.scene = 0      -- go to menu
         end
     end
 end
@@ -319,22 +416,32 @@ function love.update(dt)
     if gameSettings.scene == 0 then
         menu()
     end
+    if gameSettings.scene == 1 then
+        preGame()
+    end
     if gameSettings.scene == 2 then
         control()
         game()
     end
     if gameSettings.scene == 3 then
+        postGame()
+    end
+    if gameSettings.scene == 4 then
+        pause()
+    end
+    if gameSettings == 5 then
+        settings()
     end
     debugger()
     cam:zoomTo(camera.zoom)
-    if gameSettings.cam.rotate then
+    if camera.rotate then
         cam:rotateTo(-((p1.angle+90)*pi)/180)
     end
 end
 
 -- DRAWS EVERY FRAME --
 function love.draw()
-    p1.on = gameSettings.track.trackData:getPixel(p1.x_pos + 2000,p1.y_pos + 2000)
+    p1.on = heatSettings.map.trackData:getPixel(p1.x_pos + 2000,p1.y_pos + 2000)
     local vw = love.graphics.getWidth()
     local vh = love.graphics.getHeight()
 
@@ -345,23 +452,25 @@ function love.draw()
     if gameSettings.scene == 0 then
         love.graphics.print("Press space to play",-200,10,0,2,2)
     end
-    if gameSettings.scene == 2 then
-        love.graphics.draw(gameSettings.track.image,-2000,-2000,0,1,1) 
+    if gameSettings.scene == 2 or gameSettings.scene == 4 then
+        love.graphics.draw(heatSettings.map.image,-2000,-2000,0,1,1) 
 
         -- player 1 --
         love.graphics.draw(
-            p1.sprite,
+            p1.sprite.a,
             p1.x_pos,
             p1.y_pos,
             ((p1.angle-90)*pi)/180,
             p1.size/100,
             p1.size/100,
-            p1.sprite:getWidth()/2,
-            p1.sprite:getHeight()/2
+            p1.sprite.a:getWidth()/2,
+            p1.sprite.a:getHeight()/2
         )
     end
-
     cam:detach()
+    if gameSettings.scene == 4 then
+        love.graphics.rectangle(100,100,100,100)
+    end
     
     love.graphics.setColor(1,0,0,timeOutAlpha)
     love.graphics.print(""..time.out,20,60)
@@ -388,6 +497,6 @@ function love.draw()
         love.graphics.print("driftAmount: "..p1.driftAmount,100,160)
         love.graphics.print("scene: "..gameSettings.scene,100,180)
         love.graphics.print("pixel: "..p1.on,100,200)
-        love.graphics.print("checkpoint score: "..p1.check.."/"..gameSettings.track.checkScore,100,220)
+        love.graphics.print("checkpoint score: "..p1.check.."/"..heatSettings.map.checkScore,100,220)
     end
 end
