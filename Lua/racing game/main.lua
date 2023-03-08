@@ -4,14 +4,35 @@ function love.load()
     cam = require "camera"
     cam = cam.new(0,0,0.75)
 
-    trackData = love.image.newImageData("maps/test track.png")
-
+    
     camera = {
         zoom = 1,
         buffer = "null"
     }
 
-    canvas = love.graphics.newCanvas( )
+    heatSettings = {
+        cc = 100,
+        map = {
+            test = {
+                startPos = {-480,-1380},
+                linePos = {-380,-1380},
+                image = love.graphics.newImage("maps/test track.png"),
+                trackData = love.image.newImageData("maps/test track.png"),
+                buffer = "null"
+            },
+            test2 = {
+                startPos = {-480,-1380},
+                linePos = {-380,-1380},
+                image = love.graphics.newImage("maps/test 2.png"),
+                trackData = love.image.newImageData("maps/test 2.png"),
+                buffer = "null"
+            },
+            buffer = "null"
+        },
+        ai = false,
+        mode = 1, -- 0: normal | 1: drift | 2: ???
+        buffer = "null"
+    }
 
     gameSettings = {
         shaders = {
@@ -21,6 +42,7 @@ function love.load()
         cam = {
             rotate = false
         },
+        track = heatSettings.map.test2,
         scene = 0, -- 0: Title screen | 1: settings | 2: game | 3: pause
         buffer = "null"
     }
@@ -59,7 +81,7 @@ function love.load()
         speedUp = 0,
         drift = false,
         driftAmount = drift.amount,
-        on = trackData:getPixel(2000,2000),
+        on = gameSettings.track.trackData:getPixel(2000,2000),
         
         -- static vars
         size = 20,
@@ -82,23 +104,6 @@ function love.load()
             l4 = 0,
             l5 = 0},
         buffer = "null",
-    }
-    
-    
-    heatSettings = {
-        cc = 100,
-        map = {
-            test = {
-                startPos = {-480,-1380},
-                linePos = {-380,-1380},
-                image = love.graphics.newImage("maps/test track.png"),
-                buffer = "null"
-            },
-            buffer = "null"
-        },
-        ai = false,
-        mode = 1, -- 0: normal | 1: drift | 2: ???
-        buffer = "null"
     }
     
     sprites.grid:setWrap("repeat","repeat")
@@ -278,7 +283,7 @@ end
 
 -- DRAWS EVERY FRAME --
 function love.draw()
-    player1.on = trackData:getPixel(player1.x_pos + 2000,player1.y_pos + 2000)
+    player1.on = gameSettings.track.trackData:getPixel(player1.x_pos + 2000,player1.y_pos + 2000)
     local vw = love.graphics.getWidth()
     local vh = love.graphics.getHeight()
 
