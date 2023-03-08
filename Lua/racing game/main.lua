@@ -77,7 +77,7 @@ function love.load()
 
     heatSettings = {
         cc = 200, -- 100 144hz 200 60hz
-        map = tracks.drift,
+        map = tracks.tight,
         ai = false,
         mode = 1, -- 0: normal | 1: drift | 2: ???
         buffer = null
@@ -117,8 +117,8 @@ function love.load()
         load = true,
         sprite = {
             a = 0,
-            n = sprites.r,
-            b = sprites.rb,
+            n = sprites.y,
+            b = sprites.yb,
             buffer = null
         },
         buffer = null
@@ -171,8 +171,8 @@ function love.load()
             buffer = null
         },
         shaders = {
-            chromasep = false,
-            crt = true,
+            chromasep = true,
+            crt = false,
             filmgrain = false,
             glow = true,
             pixelate = false,
@@ -281,14 +281,17 @@ function menu()
 
     if shaderLoad == false then
         if settingsMenu.shaders.chromasep then shader = shader.chain(moonshine.effects.chromasep) 
-            -- put params here --
+            shader.chromasep.angle = 0
+            shader.chromasep.radius = 1
         end
         if settingsMenu.shaders.pixelate then shader = shader.chain(moonshine.effects.pixelate) end
-        if settingsMenu.shaders.scanlines then shader = shader.chain(moonshine.effects.scanlines) end
+        if settingsMenu.shaders.scanlines then shader = shader.chain(moonshine.effects.scanlines) 
+            shader.scanlines.opacity = 0.5
+        end
         if settingsMenu.shaders.crt then shader = shader.chain(moonshine.effects.crt) end
         if settingsMenu.shaders.filmgrain then shader = shader.chain(moonshine.effects.filmgrain) end
         if settingsMenu.shaders.glow then shader = shader.chain(moonshine.effects.glow) 
-            shader.glow.min_luma = 0
+            shader.glow.min_luma = 0.5
             shader.glow.strength = 5
         end
         if settingsMenu.shaders.sketch then shader = shader.chain(moonshine.effects.sketch) end
@@ -584,7 +587,7 @@ function love.draw()
         cam:detach()
         
         if gameSettings.scene == 0 then
-            love.graphics.print("Press space to play",20,20,0,5,5)
+            love.graphics.print("smat racr",20,20,0,5,5)
         end
     end)
 
