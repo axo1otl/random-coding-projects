@@ -1,12 +1,16 @@
 debug = true
 debug = false
 
+local moonshine = require 'moonshine'
+
 function love.load() 
     cam = require "camera"
     cam = cam.new(0,0,0.75)
     null = {}
     warning = ""
 
+    vw = love.graphics.getWidth()
+    vh = love.graphics.getHeight()
     
     camera = {
         zoom = 1,
@@ -167,8 +171,14 @@ function love.load()
             buffer = null
         },
         shaders = {
-            bloom = false,
+            chromasep = false,
+            crt = true,
+            filmgrain = false,
+            glow = true,
             pixelate = false,
+            scanlines = true,
+            sketch = false,
+            vignette = false,
             buffer = null
         },
         heat = {
@@ -185,15 +195,18 @@ function love.load()
         },
         buffer = null
     }
+
+    
     
     sprites.grid:setWrap("repeat","repeat")
-
     pi = 3.14159265359
     fps = 0
     upSpeed = 0.1 -- how often the fps updates
     upElapsed = 0 -- will be added onto until larger than upSpeed and resets
     test = 0
     newLap = false
+    shader = moonshine(moonshine.effects.colorgradesimple)
+    shaderLoad = false
 end
 
 -- CONTROLLING THE PLAYERS --
@@ -264,6 +277,24 @@ function menu()
     cam:zoomTo(camera.zoom)
     if love.keyboard.isDown('space') then
         gameSettings.scene = 1
+    end
+
+    if shaderLoad == false then
+        if settingsMenu.shaders.chromasep then shader = shader.chain(moonshine.effects.chromasep) 
+            -- put params here --
+        end
+        if settingsMenu.shaders.pixelate then shader = shader.chain(moonshine.effects.pixelate) end
+        if settingsMenu.shaders.scanlines then shader = shader.chain(moonshine.effects.scanlines) end
+        if settingsMenu.shaders.crt then shader = shader.chain(moonshine.effects.crt) end
+        if settingsMenu.shaders.filmgrain then shader = shader.chain(moonshine.effects.filmgrain) end
+        if settingsMenu.shaders.glow then shader = shader.chain(moonshine.effects.glow) 
+            shader.glow.min_luma = 0
+            shader.glow.strength = 5
+        end
+        if settingsMenu.shaders.sketch then shader = shader.chain(moonshine.effects.sketch) end
+        if settingsMenu.shaders.vignette then shader = shader.chain(moonshine.effects.vignette) end
+
+        shaderLoad = true
     end
 end
 
@@ -519,42 +550,43 @@ function love.update(dt)
     end
 end
 
--- DRAWS EVERY FRAME --
+-- DRAWS EVERY FRAME DRAWS EVERY FRAME DRAWS EVERY FRAME DRAWS EVERY FRAME DRAWS EVERY FRAME --
+-- DRAWS EVERY FRAME DRAWS EVERY FRAME DRAWS EVERY FRAME DRAWS EVERY FRAME DRAWS EVERY FRAME --
 function love.draw()
-    love.graphics.setDefaultFilter("nearest")
-    p1.on = heatSettings.map.trackData:getPixel(p1.x_pos + 2000,p1.y_pos + 2000)
-    local vw = love.graphics.getWidth()
-    local vh = love.graphics.getHeight()
-    
-    cam:attach()
-    -- bg --
-    love.graphics.draw(sprites.grid,sprites.gridQuad,-2000,-2000,0,1,1)
-    if gameSettings.scene == 2 or gameSettings.scene == 4 then
-        love.graphics.draw(heatSettings.map.image,-2000,-2000,0,1,1) 
+    shader(function()
+        love.graphics.setDefaultFilter("nearest")
+        p1.on = heatSettings.map.trackData:getPixel(p1.x_pos + 2000,p1.y_pos + 2000)
+        
+        cam:attach()
+            -- bg --
+            love.graphics.draw(sprites.grid,sprites.gridQuad,-2000,-2000,0,1,1)
+            if gameSettings.scene == 2 or gameSettings.scene == 4 then
+                love.graphics.draw(heatSettings.map.image,-2000,-2000,0,1,1) 
 
-        -- player 1 --
-        love.graphics.draw(
-            p1.sprite.a,
-            p1.x_pos,
-            p1.y_pos,
-            ((p1.angle-90)*pi)/180,
-            p1.size/100,
-            p1.size/100,
-            p1.sprite.a:getWidth()/2,
-            p1.sprite.a:getHeight()/2
-        )
-        if gameSettings.seeVectors then
-            love.graphics.setColor(1,0,0,1)
-            love.graphics.rectangle("fill",p1.x_pos,p1.y_pos,p1.x_vel*100,2)
-            love.graphics.setColor(0,0,1,1)
-            love.graphics.rectangle("fill",p1.x_pos,p1.y_pos,2,p1.y_vel*100)
+                -- player 1 --
+                love.graphics.draw(
+                    p1.sprite.a,
+                    p1.x_pos,
+                    p1.y_pos,
+                ((p1.angle-90)*pi)/180,
+                p1.size/100,
+                p1.size/100,
+                p1.sprite.a:getWidth()/2,
+                p1.sprite.a:getHeight()/2
+                )
+                if gameSettings.seeVectors then
+                    love.graphics.setColor(1,0,0,1)
+                    love.graphics.rectangle("fill",p1.x_pos,p1.y_pos,p1.x_vel*100,2)
+                    love.graphics.setColor(0,0,1,1)
+                    love.graphics.rectangle("fill",p1.x_pos,p1.y_pos,2,p1.y_vel*100)
+                end
+            end
+        cam:detach()
+        
+        if gameSettings.scene == 0 then
+            love.graphics.print("Press space to play",20,20,0,5,5)
         end
-    end
-    cam:detach()
-    
-    if gameSettings.scene == 0 then
-        love.graphics.print("Press space to play",20,20,0,2,2)
-    end
+    end)
 
     -- timers --
     if gameSettings.scene == 2 then
@@ -572,8 +604,9 @@ function love.draw()
         love.graphics.print(""..time.laps.l5,20,180,0,1,1)
     end
 
+    love.graphics.print("FPS: "..fps,0,0)
+
     if debug then
-        love.graphics.print("FPS: "..fps,0,0)
         love.graphics.print("x_vel: "..p1.x_vel,100,20)
         love.graphics.print("y_vel: "..p1.y_vel,100,40)
         love.graphics.print("x_pos: "..p1.x_pos,100,60)
