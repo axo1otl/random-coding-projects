@@ -1,4 +1,5 @@
-debug = false
+debug = true
+--debug = false
 
 function love.load() 
     cam = require "camera"
@@ -15,16 +16,16 @@ function love.load()
         map = {
             test = {
                 startPos = {-480,-1380},
-                linePos = {-380,-1380},
                 image = love.graphics.newImage("maps/test track.png"),
                 trackData = love.image.newImageData("maps/test track.png"),
+                checkScore = 0,
                 buffer = "null"
             },
             test2 = {
-                startPos = {-480,-1380},
-                linePos = {-380,-1380},
+                startPos = {-550,-1250},
                 image = love.graphics.newImage("maps/test 2.png"),
                 trackData = love.image.newImageData("maps/test 2.png"),
+                checkScore = 5,
                 buffer = "null"
             },
             buffer = "null"
@@ -43,7 +44,7 @@ function love.load()
             rotate = false
         },
         track = heatSettings.map.test2,
-        scene = 0, -- 0: Title screen | 1: settings | 2: game | 3: pause
+        scene = 0, -- 0: Title screen | 1: settings | 2: game | 3: pause | 4: score table
         buffer = "null"
     }
 
@@ -70,7 +71,7 @@ function love.load()
         sens = 0.01
     }
     
-    player1 = {
+    p1 = {
         -- dynamic vars
         x_vel = 0,
         y_vel = 0,
@@ -82,6 +83,7 @@ function love.load()
         drift = false,
         driftAmount = drift.amount,
         on = gameSettings.track.trackData:getPixel(2000,2000),
+        check = 0,
         
         -- static vars
         size = 20,
@@ -118,62 +120,62 @@ end
 
 -- CONTROLLING THE PLAYERS --
 function control()
-    if player1.load then
-        player1.x_pos = heatSettings.map.test.startPos[1]
-        player1.y_pos = heatSettings.map.test.startPos[2]
-        player1.load = false
+    if p1.load then
+        p1.x_pos = gameSettings.track.startPos[1]
+        p1.y_pos = gameSettings.track.startPos[2]
+        p1.load = false
     end
     -- actual controls
     if love.keyboard.isDown('d') then
-        player1.angle = player1.angle + player1.turnSens
+        p1.angle = p1.angle + p1.turnSens
     end
     if love.keyboard.isDown('a') then
-        player1.angle = player1.angle - player1.turnSens
+        p1.angle = p1.angle - p1.turnSens
     end
 
     if love.keyboard.isDown('w') then
-        player1.speedUp = player1.speedUp + player1.acceleration
-        player1.speed = math.log(player1.speedUp * (heatSettings.cc/100))/2
+        p1.speedUp = p1.speedUp + p1.acceleration
+        p1.speed = math.log(p1.speedUp * (heatSettings.cc/100))/2
     else
-        player1.speed = player1.speed / player1.deceleration
-        player1.speedUp = 0
+        p1.speed = p1.speed / p1.deceleration
+        p1.speedUp = 0
     end
 
     if love.keyboard.isDown('s') then
-        if player1.speed > -1 * (heatSettings.cc/50) then
-            player1.speed = ((1 + player1.speed) / (player1.deceleration * 1.2)) - 1
+        if p1.speed > -1 * (heatSettings.cc/50) then
+            p1.speed = ((1 + p1.speed) / (p1.deceleration * 1.2)) - 1
         end
     end
 
     if love.keyboard.isDown('lshift') or heatSettings.mode == 1 then
-        player1.drift = true
+        p1.drift = true
     else
-        player1.drift = false
+        p1.drift = false
     end
     
-    if player1.drift then
-        player1.driftAmount = drift.sens
-        player1.sprite = sprites.rb
+    if p1.drift then
+        p1.driftAmount = drift.sens
+        p1.sprite = sprites.rb
     else
         --                    modify                ((difference) * half of a modifier)
-        player1.driftAmount = player1.driftAmount - ((player1.driftAmount - drift.amount) * (0.5 * drift.sens))
-        player1.sprite = sprites.r
+        p1.driftAmount = p1.driftAmount - ((p1.driftAmount - drift.amount) * (0.5 * drift.sens))
+        p1.sprite = sprites.r
     end
 
     -- update direction
-    player1.x_vel = player1.x_vel - ((player1.x_vel - math.cos(((player1.angle)*pi)/180)) * player1.driftAmount)
-    player1.y_vel = player1.y_vel - ((player1.y_vel - math.sin(((player1.angle)*pi)/180)) * player1.driftAmount)
+    p1.x_vel = p1.x_vel - ((p1.x_vel - math.cos(((p1.angle)*pi)/180)) * p1.driftAmount)
+    p1.y_vel = p1.y_vel - ((p1.y_vel - math.sin(((p1.angle)*pi)/180)) * p1.driftAmount)
     
     -- move player
-    player1.x_pos = player1.x_pos + (player1.x_vel * player1.speed)
-    player1.y_pos = player1.y_pos + (player1.y_vel * player1.speed)
+    p1.x_pos = p1.x_pos + (p1.x_vel * p1.speed)
+    p1.y_pos = p1.y_pos + (p1.y_vel * p1.speed)
 end
 
 -- DEBUG CONTROLLS --
 function debugger()
     if love.keyboard.isDown('r') then
-        player1.x_pos = 100
-        player1.y_pos = 100
+        p1.x_pos = 100
+        p1.y_pos = 100
     end
 
 end
@@ -198,17 +200,21 @@ function game()
     if love.keyboard.isDown('escape') then
         gameSettings.scene = 0
     end
-    cam:lookAt(player1.x_pos,player1.y_pos)
+    cam:lookAt(p1.x_pos,p1.y_pos)
 
     time.lap = time.lap + upElapsed
-    if player1.on == 0 then
+    if p1.on == 0 then
         time.out = time.out + upElapsed
         timeOutAlpha = 1
     else
         timeOutAlpha = 0
     end
 
-    if player1.on == 0.2 then
+    -- laps --
+    if p1.on == 0.2 then
+        if p1.check < gameSettings.track.checkScore and p1.check > 2 * gameSettings.track.checkScore then
+            time.out = time.out * 2
+        end
         time.total = time.total + time.lap + time.out * 4
         
         if time.laps.l1 == 0 then
@@ -221,11 +227,12 @@ function game()
             time.laps.l4 = time.lap + time.out * 4
         elseif time.laps.l5 == 0 then
             time.laps.l5 = time.lap + time.out * 4
+            gameSettings.scene = 4
         end
-
+    
         time.lap = 0
         time.out = 0
-
+        
         if newLap == false then
             time.laps.l1 = 0
             time.total = 0
@@ -233,6 +240,50 @@ function game()
             time.out = 0
         end
         newLap = true
+
+        p1.check = 0
+    end
+
+    -- checkpoints --
+    if p1.on*255 == 52 then
+        p1.check = 1
+    end
+    if p1.on*255 == 53 then
+        if p1.check == 1 then
+            p1.check = 2
+        end
+    end
+    if p1.on*255 == 54 then
+        if p1.check == 2 then
+            p1.check = 3
+        end
+    end
+    if p1.on*255 == 55 then
+        if p1.check == 3 then
+            p1.check = 4
+        end
+    end
+    if p1.on*255 == 56 then
+        if p1.check == 4 then
+            p1.check = 5
+        end
+    end
+    if p1.on*255 == 57 then
+        if p1.check == 5 then
+            p1.check = 6
+        end
+    end
+    if p1.on*255 == 58 then
+        p1.check = 7
+    end
+    if p1.on*255 == 59 then
+        p1.check = 8
+    end
+    if p1.on*255 == 60 then
+        p1.check = 9
+    end
+    if p1.on*255 == 61 then
+        p1.check = 10
     end
 
 end
@@ -277,13 +328,13 @@ function love.update(dt)
     debugger()
     cam:zoomTo(camera.zoom)
     if gameSettings.cam.rotate then
-        cam:rotateTo(-((player1.angle+90)*pi)/180)
+        cam:rotateTo(-((p1.angle+90)*pi)/180)
     end
 end
 
 -- DRAWS EVERY FRAME --
 function love.draw()
-    player1.on = gameSettings.track.trackData:getPixel(player1.x_pos + 2000,player1.y_pos + 2000)
+    p1.on = gameSettings.track.trackData:getPixel(p1.x_pos + 2000,p1.y_pos + 2000)
     local vw = love.graphics.getWidth()
     local vh = love.graphics.getHeight()
 
@@ -295,18 +346,18 @@ function love.draw()
         love.graphics.print("Press space to play",-200,10,0,2,2)
     end
     if gameSettings.scene == 2 then
-        love.graphics.draw(heatSettings.map.test.image,-2000,-2000,0,1,1) 
+        love.graphics.draw(gameSettings.track.image,-2000,-2000,0,1,1) 
 
         -- player 1 --
         love.graphics.draw(
-            player1.sprite,
-            player1.x_pos,
-            player1.y_pos,
-            ((player1.angle-90)*pi)/180,
-            player1.size/100,
-            player1.size/100,
-            player1.sprite:getWidth()/2,
-            player1.sprite:getHeight()/2
+            p1.sprite,
+            p1.x_pos,
+            p1.y_pos,
+            ((p1.angle-90)*pi)/180,
+            p1.size/100,
+            p1.size/100,
+            p1.sprite:getWidth()/2,
+            p1.sprite:getHeight()/2
         )
     end
 
@@ -327,15 +378,16 @@ function love.draw()
 
     if debug then
         love.graphics.print("FPS: "..fps,0,0)
-        love.graphics.print("x_vel: "..player1.x_vel,0,20)
-        love.graphics.print("y_vel: "..player1.y_vel,0,40)
-        love.graphics.print("x_pos: "..player1.x_pos,0,60)
-        love.graphics.print("y_pos: "..player1.y_pos,0,80)
-        love.graphics.print("angle: "..player1.angle,0,100)
-        love.graphics.print("speed: "..player1.speed,0,120)
-        love.graphics.print("drift: "..tostring(player1.drift),0,140)
-        love.graphics.print("driftAmount: "..player1.driftAmount,0,160)
-        love.graphics.print("scene: "..gameSettings.scene,0,180)
-        love.graphics.print("pixel: "..player1.on,0,200)
+        love.graphics.print("x_vel: "..p1.x_vel,100,20)
+        love.graphics.print("y_vel: "..p1.y_vel,100,40)
+        love.graphics.print("x_pos: "..p1.x_pos,100,60)
+        love.graphics.print("y_pos: "..p1.y_pos,100,80)
+        love.graphics.print("angle: "..p1.angle,100,100)
+        love.graphics.print("speed: "..p1.speed,100,120)
+        love.graphics.print("drift: "..tostring(p1.drift),100,140)
+        love.graphics.print("driftAmount: "..p1.driftAmount,100,160)
+        love.graphics.print("scene: "..gameSettings.scene,100,180)
+        love.graphics.print("pixel: "..p1.on,100,200)
+        love.graphics.print("checkpoint score: "..p1.check.."/"..gameSettings.track.checkScore,100,220)
     end
 end
