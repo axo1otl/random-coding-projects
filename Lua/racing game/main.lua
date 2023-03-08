@@ -161,7 +161,28 @@ function love.load()
         -- HANDLING --
         -- turnSens
         -- see velocities
-
+        camera = {
+            zoom = 2,
+            rotate = false,
+            buffer = null
+        },
+        shaders = {
+            bloom = false,
+            pixelate = false,
+            buffer = null
+        },
+        heat = {
+            cc = heatSettings.cc,
+            spriteN = p1.sprite.n,
+            spriteB = p1.sprite.b,
+            mode = heatSettings.mode,
+            buffer = null
+        },
+        handling = {
+            turnSens = p1.turnSens,
+            seeVels = gameSettings.seeVectors,
+            buffer = null
+        },
         buffer = null
     }
     
