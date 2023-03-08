@@ -1,5 +1,5 @@
 debug = true
---debug = false
+debug = false
 
 function love.load() 
     cam = require "camera"
@@ -45,9 +45,9 @@ function love.load()
                 y = -1250,
             buffer = null
             },
-            image = love.graphics.newImage("maps/test 2.png"),
-            trackData = love.image.newImageData("maps/test 2.png"),
-            checkScore = 5,
+            image = love.graphics.newImage("maps/drift.png"),
+            trackData = love.image.newImageData("maps/drift.png"),
+            checkScore = 0,
             buffer = null
         },
         buffer = null
@@ -72,7 +72,7 @@ function love.load()
     }
 
     heatSettings = {
-        cc = 100,
+        cc = 200, -- 100 144hz 200 60hz
         map = tracks.drift,
         ai = false,
         mode = 1, -- 0: normal | 1: drift | 2: ???
@@ -80,8 +80,9 @@ function love.load()
     }
 
     gameSettings = {
-        scene = 0,  -- 0: menu | 1: settings | 2: game | 3: pause | 4: post-game | 5: pre-game
-                    -- 0: menu | 1: pre-game | 2: game | 3: post-game | 4: pause | 5: settings
+        scene = 0,  -- 0: menu | 1: pre-game | 2: game | 3: post-game | 4: pause | 5: settings
+                    -- 6: in-game settings
+        seeVectors = true,
         buffer = null
     }
 
@@ -108,7 +109,7 @@ function love.load()
         size = 20,
         acceleration = 1.1,
         deceleration = 1.02,
-        turnSens = 1.5,
+        turnSens = 2, -- 1.5 144hz | 2 60hz
         load = true,
         sprite = {
             a = 0,
@@ -133,6 +134,16 @@ function love.load()
         buffer = null,
     }
 
+    select = {
+        pos = {
+            x = 5,
+            y = 60,
+            buffer = null
+        },
+        alpha = 1,
+        buffer = null
+    }
+
     settingsMenu = {
     -- this works by ints (0,1,2...) when the menu screen is loaded, these settings 
     -- will apply navigate through the settings with 'w' and 's' keys and an 
@@ -149,7 +160,7 @@ function love.load()
         -- mode
         -- HANDLING --
         -- turnSens
-        -- 
+        -- see velocities
 
         buffer = null
     }
@@ -233,9 +244,6 @@ function menu()
     if love.keyboard.isDown('space') then
         gameSettings.scene = 1
     end
-    if love.keyboard.isDown('return') then
-        gameSettings.scene = 5
-    end
 end
 
 function preGame()
@@ -243,11 +251,16 @@ function preGame()
 end
 
 function settings()
+    if from == 4 then
+        gameSettings.scene = 6
+    end
     -- settings 
 end
 
 function game()
     cam:lookAt(p1.x_pos,p1.y_pos)
+
+    paused = false
 
     time.lap = time.lap + upElapsed
     if p1.on == 0 then
@@ -374,9 +387,9 @@ function game()
 end
 
 function pause()
-    if love.keyboard.isDown('escape') then
-        gameSettings.scene = 2 -- go to game
-    end 
+    paused = true
+    select.pos.x = 10
+    --select.pos.y = 60
 end
 
 function love.keypressed(key, scancode, isrepeat)
@@ -384,20 +397,66 @@ function love.keypressed(key, scancode, isrepeat)
         if gameSettings.scene == 0 then -- if in menu
             love.event.quit()           -- quit game
         end
-        if gameSettings == 5 then       -- if in settings
-            gameSettings = 0            -- go to menu
+        if gameSettings.scene == 5 then -- if in settings
+            gameSettings.scene = 0      -- go to menu
+        end
+        if gameSettings.scene == 4 then -- if paused
+            gameSettings.scene = 40      -- go to pause2
         end
         if gameSettings.scene == 2 then -- if in game
             gameSettings.scene = 4      -- pause
-        end
-        if gameSettings == 4 then       -- if paused
-            gameSettings.scene = 2      -- unpause
         end
         if gameSettings.scene == 1 then -- if in pre-game
             gameSettings.scene = 0      -- go to menu
         end
         if gameSettings.scene == 3 then -- if in post-game
             gameSettings.scene = 0      -- go to menu
+        end
+        if gameSettings.scene == 40 then -- if paused2
+            gameSettings.scene = 2      -- go to game
+        end
+    end
+
+    if paused and (key == "down" or key == 's') then
+        if select.pos.y == 100 then
+            select.pos.y = 120
+        end
+        if select.pos.y == 80 then
+            select.pos.y = 100
+        end
+        if select.pos.y == 60 then
+            select.pos.y = 80
+        end
+        if select.pos.y == 120 then
+            select.pos.y = 60
+        end
+    end
+    if paused and (key == "up" or key == 'w') then
+        if select.pos.y == 60 then
+            select.pos.y = 120
+        end
+        if select.pos.y == 80 then
+            select.pos.y = 60
+        end
+        if select.pos.y == 100 then
+            select.pos.y = 80
+        end
+        if select.pos.y == 120 then
+            select.pos.y = 100
+        end
+    end
+
+    if paused and key == "return" then
+        if select.pos.y == 60 then
+            paused = false
+            gameSettings.scene = 2
+        end
+        if select.pos.y == 80 then
+            gameSettings.scene = 5
+            from = 4
+        end
+        if select.pos.y == 100 or select.pos.y == 120 then
+            gameSettings.scene = 0
         end
     end
 end
@@ -441,17 +500,14 @@ end
 
 -- DRAWS EVERY FRAME --
 function love.draw()
+    love.graphics.setDefaultFilter("nearest")
     p1.on = heatSettings.map.trackData:getPixel(p1.x_pos + 2000,p1.y_pos + 2000)
     local vw = love.graphics.getWidth()
     local vh = love.graphics.getHeight()
-
     
     cam:attach()
     -- bg --
     love.graphics.draw(sprites.grid,sprites.gridQuad,-2000,-2000,0,1,1)
-    if gameSettings.scene == 0 then
-        love.graphics.print("Press space to play",-200,10,0,2,2)
-    end
     if gameSettings.scene == 2 or gameSettings.scene == 4 then
         love.graphics.draw(heatSettings.map.image,-2000,-2000,0,1,1) 
 
@@ -466,24 +522,34 @@ function love.draw()
             p1.sprite.a:getWidth()/2,
             p1.sprite.a:getHeight()/2
         )
+        if gameSettings.seeVectors then
+            love.graphics.setColor(1,0,0,1)
+            love.graphics.rectangle("fill",p1.x_pos,p1.y_pos,p1.x_vel*100,2)
+            love.graphics.setColor(0,0,1,1)
+            love.graphics.rectangle("fill",p1.x_pos,p1.y_pos,2,p1.y_vel*100)
+        end
     end
     cam:detach()
-    if gameSettings.scene == 4 then
-        love.graphics.rectangle(100,100,100,100)
-    end
     
-    love.graphics.setColor(1,0,0,timeOutAlpha)
-    love.graphics.print(""..time.out,20,60)
-    love.graphics.setColor(1,1,1,0.75)
-    love.graphics.print(""..time.lap,20,40,0,1.1,1.1)
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.print(""..time.total,20,20,0,1.25,1.25)
+    if gameSettings.scene == 0 then
+        love.graphics.print("Press space to play",20,20,0,2,2)
+    end
 
-    love.graphics.print(""..time.laps.l1,20,100,0,1,1)
-    love.graphics.print(""..time.laps.l2,20,120,0,1,1)
-    love.graphics.print(""..time.laps.l3,20,140,0,1,1)
-    love.graphics.print(""..time.laps.l4,20,160,0,1,1)
-    love.graphics.print(""..time.laps.l5,20,180,0,1,1)
+    -- timers --
+    if gameSettings.scene == 2 then
+        love.graphics.setColor(1,0,0,timeOutAlpha)
+        love.graphics.print(""..time.out,20,60)
+        love.graphics.setColor(1,1,1,0.75)
+        love.graphics.print(""..time.lap,20,40,0,1.1,1.1)
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.print(""..time.total,20,20,0,1.25,1.25)
+
+        love.graphics.print(""..time.laps.l1,20,100,0,1,1)
+        love.graphics.print(""..time.laps.l2,20,120,0,1,1)
+        love.graphics.print(""..time.laps.l3,20,140,0,1,1)
+        love.graphics.print(""..time.laps.l4,20,160,0,1,1)
+        love.graphics.print(""..time.laps.l5,20,180,0,1,1)
+    end
 
     if debug then
         love.graphics.print("FPS: "..fps,0,0)
@@ -498,5 +564,18 @@ function love.draw()
         love.graphics.print("scene: "..gameSettings.scene,100,180)
         love.graphics.print("pixel: "..p1.on,100,200)
         love.graphics.print("checkpoint score: "..p1.check.."/"..heatSettings.map.checkScore,100,220)
+        love.graphics.print("select y: "..select.pos.y,100,240)
+    end
+
+    -- pausing --
+    if gameSettings.scene == 4 then
+        love.graphics.setColor(0,0,0,0.75)
+        love.graphics.rectangle("fill",0,0,vw,vh)
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.print("Paused",20,20,0,2,2)
+        love.graphics.print("back to game",20,60,0,1,1)
+        love.graphics.print("settings",20,80,0,1,1)
+        love.graphics.print("quit",20,100,0,1,1)
+        love.graphics.print("|",select.pos.x,select.pos.y,0,1,1)
     end
 end
