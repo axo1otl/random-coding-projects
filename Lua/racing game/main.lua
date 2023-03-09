@@ -5,7 +5,7 @@ local moonshine = require 'moonshine'
 
 function love.load() 
     cam = require "camera"
-    cam = cam.new(0,0,0.75)
+    cam = cam.new(0,0,0.75,0,damped)
     null = {}
     warning = ""
 
@@ -86,7 +86,6 @@ function love.load()
     gameSettings = {
         scene = 0,  -- 0: menu | 1: pre-game | 2: game | 3: post-game | 4: pause | 5: settings
                     -- 6: in-game settings
-        seeVectors = true,
         buffer = null
     }
 
@@ -152,45 +151,32 @@ function love.load()
     -- this works by ints (0,1,2...) when the menu screen is loaded, these settings 
     -- will apply navigate through the settings with 'w' and 's' keys and an 
     -- "active" modifier for 'a' and 'd' keys
-        -- CAMERA --
-        -- zoom
-        -- rotate
-        -- SHADERS --
-        -- bloom
-        -- pixelate
-        -- HEAT --
-        -- cc
-        -- sprite + boost sprite (display the images too)
-        -- mode
-        -- HANDLING --
-        -- turnSens
-        -- see velocities
         camera = {
             zoom = 2,
-            rotate = false,
+            rotate = 0,
             buffer = null
         },
         shaders = {
-            chromasep = true,
-            crt = false,
-            filmgrain = false,
-            glow = true,
-            pixelate = false,
-            scanlines = true,
-            sketch = false,
-            vignette = false,
+            chromasep = 1,
+            crt = 0,
+            filmgrain = 0,
+            glow = 1,
+            pixelate = 0,
+            scanlines = 1,
+            sketch = 0,
+            vignette = 0,
             buffer = null
         },
         heat = {
             cc = heatSettings.cc,
             spriteN = p1.sprite.n,
             spriteB = p1.sprite.b,
-            mode = heatSettings.mode,
+            mode = 0,
             buffer = null
         },
         handling = {
             turnSens = p1.turnSens,
-            seeVels = gameSettings.seeVectors,
+            seeVels = 0,
             buffer = null
         },
         buffer = null
@@ -207,6 +193,19 @@ function love.load()
     newLap = false
     shader = moonshine(moonshine.effects.colorgradesimple)
     shaderLoad = false
+
+    Czoom = {0,1,0,1}
+    Crot = {1,1,1,1}
+    Cca = {0,1,0,1}
+    Ccrt = {1,1,1,1}
+    Cfg = {1,1,1,1}
+    Cblm = {0,1,0,1}
+    Cpxl = {1,1,1,1}
+    Cscln = {0,1,0,1}
+    Cskch = {1,1,1,1}
+    Cv = {1,1,1,1}
+    Cdom = {0,1,0,1}
+    Csvv = {1,1,1,1}
 end
 
 -- CONTROLLING THE PLAYERS --
@@ -271,32 +270,42 @@ function debugger()
 
 end
 
+-- SHADERS --
+function loadShaders()
+    shader = moonshine(moonshine.effects.colorgradesimple)
+    if settingsMenu.shaders.chromasep == 1 then shader = shader.chain(moonshine.effects.chromasep) 
+        shader.chromasep.angle = 0
+        shader.chromasep.radius = 2
+    end
+    if settingsMenu.shaders.pixelate == 1 then shader = shader.chain(moonshine.effects.pixelate) 
+        shader.pixelate.size = 4
+    end
+    if settingsMenu.shaders.scanlines == 1 then shader = shader.chain(moonshine.effects.scanlines) 
+        shader.scanlines.opacity = 0.5
+    end
+    if settingsMenu.shaders.crt == 1 then shader = shader.chain(moonshine.effects.crt) end
+    if settingsMenu.shaders.filmgrain == 1 then shader = shader.chain(moonshine.effects.filmgrain) 
+        shader.filmgrain.size = 2
+        shader.filmgrain.opacity = 1
+    end
+    if settingsMenu.shaders.glow == 1 then shader = shader.chain(moonshine.effects.glow) 
+        shader.glow.min_luma = 0.5
+        shader.glow.strength = 5
+    end
+    if settingsMenu.shaders.sketch == 1 then shader = shader.chain(moonshine.effects.sketch) end
+    if settingsMenu.shaders.vignette == 1 then shader = shader.chain(moonshine.effects.vignette) end
+end
+
 -- NAVIGATION STUFF --
 function menu()
     cam:lookAt(100,100)
-    cam:zoomTo(camera.zoom)
+    cam:zoomTo(settingsMenu.camera.zoom)
     if love.keyboard.isDown('space') then
         gameSettings.scene = 1
     end
 
     if shaderLoad == false then
-        if settingsMenu.shaders.chromasep then shader = shader.chain(moonshine.effects.chromasep) 
-            shader.chromasep.angle = 0
-            shader.chromasep.radius = 1
-        end
-        if settingsMenu.shaders.pixelate then shader = shader.chain(moonshine.effects.pixelate) end
-        if settingsMenu.shaders.scanlines then shader = shader.chain(moonshine.effects.scanlines) 
-            shader.scanlines.opacity = 0.5
-        end
-        if settingsMenu.shaders.crt then shader = shader.chain(moonshine.effects.crt) end
-        if settingsMenu.shaders.filmgrain then shader = shader.chain(moonshine.effects.filmgrain) end
-        if settingsMenu.shaders.glow then shader = shader.chain(moonshine.effects.glow) 
-            shader.glow.min_luma = 0.5
-            shader.glow.strength = 5
-        end
-        if settingsMenu.shaders.sketch then shader = shader.chain(moonshine.effects.sketch) end
-        if settingsMenu.shaders.vignette then shader = shader.chain(moonshine.effects.vignette) end
-
+        loadShaders()
         shaderLoad = true
     end
 end
@@ -304,7 +313,9 @@ end
 function preGame()
     gameSettings.scene = 2
 end
-
+function postGame()
+    
+end
 function settings()
     if from == 4 then
         gameSettings.scene = 6
@@ -329,34 +340,35 @@ function game()
     if p1.on == 0.2 then
         if not p1.check == heatSettings.map.trackData then
             warning = "Missed "..(heatSettings.map.trackData - p1.check).." checkpoints"
-        end
-        time.total = time.total + time.lap + time.out * 4
+        else
+            time.total = time.total + time.lap + time.out * 4
+            
+            if time.laps.l1 == 0 then
+                time.laps.l1 = time.total
+            elseif time.laps.l2 == 0 then
+                time.laps.l2 = time.lap + time.out * 4
+            elseif time.laps.l3 == 0 then
+                time.laps.l3 = time.lap + time.out * 4
+            elseif time.laps.l4 == 0 then
+                time.laps.l4 = time.lap + time.out * 4
+            elseif time.laps.l5 == 0 then
+                time.laps.l5 = time.lap + time.out * 4
+                gameSettings.scene = 3
+            end
         
-        if time.laps.l1 == 0 then
-            time.laps.l1 = time.total
-        elseif time.laps.l2 == 0 then
-            time.laps.l2 = time.lap + time.out * 4
-        elseif time.laps.l3 == 0 then
-            time.laps.l3 = time.lap + time.out * 4
-        elseif time.laps.l4 == 0 then
-            time.laps.l4 = time.lap + time.out * 4
-        elseif time.laps.l5 == 0 then
-            time.laps.l5 = time.lap + time.out * 4
-            gameSettings.scene = 3
-        end
-    
-        time.lap = 0
-        time.out = 0
-        
-        if newLap == false then
-            time.laps.l1 = 0
-            time.total = 0
             time.lap = 0
             time.out = 0
-        end
-        newLap = true
 
-        p1.check = 0
+            if newLap == false then
+                time.laps.l1 = 0
+                time.total = 0
+                time.lap = 0
+                time.out = 0
+            end
+            newLap = true
+
+            p1.check = 0
+        end
     end
 
     -- checkpoints --
@@ -453,7 +465,7 @@ function love.keypressed(key, scancode, isrepeat)
             love.event.quit()           -- quit game
         end
         if gameSettings.scene == 5 then -- if in settings
-            gameSettings.scene = 0      -- go to menu
+            gameSettings.scene = 2      -- go to menu
         end
         if gameSettings.scene == 4 then -- if paused
             gameSettings.scene = 40      -- go to pause2
@@ -473,6 +485,11 @@ function love.keypressed(key, scancode, isrepeat)
     end
 
     if paused and (key == "down" or key == 's') then
+        if pauseMenuLoad then
+            select.pos.y = 60
+            pauseMenuLoad = false
+        end
+
         if select.pos.y == 100 then
             select.pos.y = 120
         end
@@ -487,6 +504,10 @@ function love.keypressed(key, scancode, isrepeat)
         end
     end
     if paused and (key == "up" or key == 'w') then
+        if pauseMenuLoad then
+            select.pos.y = 60
+            pauseMenuLoad = false
+        end
         if select.pos.y == 60 then
             select.pos.y = 120
         end
@@ -501,19 +522,208 @@ function love.keypressed(key, scancode, isrepeat)
         end
     end
 
-    if paused and key == "return" then
+    if paused and (key == "return" or key == "space") then
         if select.pos.y == 60 then
             paused = false
+            pauseMenuLoad = true
             gameSettings.scene = 2
         end
         if select.pos.y == 80 then
+            paused = false
+            pauseMenuLoad = true
+            select.pos.y = 60
             gameSettings.scene = 5
             from = 4
         end
         if select.pos.y == 100 or select.pos.y == 120 then
+            paused = false
+            pauseMenuLoad = true
+            settingsLoad = true
             gameSettings.scene = 0
         end
     end
+
+    if gameSettings.scene == 5 and (key == "down" or key == 's') then
+        if settingsLoad then
+            select.pos.y = 80
+            settingsLoad = false
+        end
+        if select.pos.y == 315 then select.pos.y = 3300 end
+        if select.pos.y == 300 then select.pos.y = 315 end
+        if select.pos.y == 245 then select.pos.y = 300 end
+        if select.pos.y == 230 then select.pos.y = 245 end
+        if select.pos.y == 215 then select.pos.y = 230 end
+        if select.pos.y == 200 then select.pos.y = 215 end
+        if select.pos.y == 185 then select.pos.y = 200 end
+        if select.pos.y == 170 then select.pos.y = 185 end
+        if select.pos.y == 155 then select.pos.y = 170 end
+        if select.pos.y == 140 then select.pos.y = 155 end
+        if select.pos.y == 95 then select.pos.y = 140 end
+        if select.pos.y == 80 then select.pos.y = 95 end
+        if select.pos.y == 60 then select.pos.y = 80 end
+        if select.pos.y == 3300 then select.pos.y = 60 end
+    end
+    if gameSettings.scene == 5 and (key == "up" or key == 'w') then
+        if settingsLoad then
+            select.pos.y = 80
+            settingsLoad = false
+        end
+
+        if select.pos.y == 80 then select.pos.y = 3300 end
+        if select.pos.y == 95 then select.pos.y = 80 end
+        if select.pos.y == 140 then select.pos.y = 95 end
+        if select.pos.y == 155 then select.pos.y = 140 end
+        if select.pos.y == 170 then select.pos.y = 155 end
+        if select.pos.y == 185 then select.pos.y = 170 end
+        if select.pos.y == 200 then select.pos.y = 185 end
+        if select.pos.y == 215 then select.pos.y = 200 end
+        if select.pos.y == 230 then select.pos.y = 215 end
+        if select.pos.y == 245 then select.pos.y = 230 end
+        if select.pos.y == 300 then select.pos.y = 245 end
+        if select.pos.y == 315 then select.pos.y = 300 end
+        if select.pos.y == 3300 then select.pos.y = 315 end
+    end
+    if gameSettings.scene == 5 and key == "return" or key == 'a' or key == 'd' then
+        if select.pos.y == 80 then 
+            if settingsMenu.camera.zoom == 2 then
+                settingsMenu.camera.zoom = 4
+                Czoom = {1,1,1,1}
+            end
+            if settingsMenu.camera.zoom == 1 then
+                settingsMenu.camera.zoom = 2
+                Czoom = {0,1,0,1}
+            end
+            if settingsMenu.camera.zoom == 4 then
+                settingsMenu.camera.zoom = 1
+            end
+        end
+        if select.pos.y == 95 then 
+            if settingsMenu.camera.rotate == 1 then
+                settingsMenu.camera.rotate = 2
+                Crot = {1,1,1,1}
+            end
+            if settingsMenu.camera.rotate == 0 then
+                settingsMenu.camera.rotate = 1
+                Crot = {0,1,0,1}
+            end
+            if settingsMenu.camera.rotate == 2 then
+                settingsMenu.camera.rotate = 0
+            end
+        end
+        if select.pos.y == 140 then 
+            if settingsMenu.shaders.chromasep == 1 then
+                settingsMenu.shaders.chromasep = 2
+                Cca = {1,1,1,1}
+            end
+            if settingsMenu.shaders.chromasep == 0 then
+                settingsMenu.shaders.chromasep = 1
+                Cca = {0,1,0,1}
+            end
+            if settingsMenu.shaders.chromasep == 2 then
+                settingsMenu.shaders.chromasep = 0
+            end
+            loadShaders()
+        end
+        if select.pos.y == 155 then 
+            if settingsMenu.shaders.crt == 1 then
+                settingsMenu.shaders.crt = 2
+                Ccrt = {1,1,1,1}
+            end
+            if settingsMenu.shaders.crt == 0 then
+                settingsMenu.shaders.crt = 1
+                Ccrt = {0,1,0,1}
+            end
+            if settingsMenu.shaders.crt == 2 then
+                settingsMenu.shaders.crt = 0
+            end
+            loadShaders()
+        end
+        if select.pos.y == 170 then 
+            if settingsMenu.shaders.filmgrain == 1 then
+                settingsMenu.shaders.filmgrain = 2
+                Cfg = {1,1,1,1}
+            end
+            if settingsMenu.shaders.filmgrain == 0 then
+                settingsMenu.shaders.filmgrain = 1
+                Cfg = {0,1,0,1}
+            end
+            if settingsMenu.shaders.filmgrain == 2 then
+                settingsMenu.shaders.filmgrain = 0
+            end
+            loadShaders()
+        end
+        if select.pos.y == 185 then 
+            if settingsMenu.shaders.glow == 1 then
+                settingsMenu.shaders.glow = 2
+                Cblm = {1,1,1,1}
+            end
+            if settingsMenu.shaders.glow == 0 then
+                settingsMenu.shaders.glow = 1
+                Cblm = {0,1,0,1}
+            end
+            if settingsMenu.shaders.glow == 2 then
+                settingsMenu.shaders.glow = 0
+            end
+            loadShaders()
+        end
+        if select.pos.y == 200 then 
+            if settingsMenu.shaders.pixelate == 1 then
+                settingsMenu.shaders.pixelate = 2
+                Cpxl = {1,1,1,1}
+            end
+            if settingsMenu.shaders.pixelate == 0 then
+                settingsMenu.shaders.pixelate = 1
+                Cpxl = {0,1,0,1}
+            end
+            if settingsMenu.shaders.pixelate == 2 then
+                settingsMenu.shaders.pixelate = 0
+            end
+            loadShaders()
+        end
+        if select.pos.y == 215 then 
+            if settingsMenu.shaders.scanlines == 1 then
+                settingsMenu.shaders.scanlines = 2
+                Cslcn = {1,1,1,1}
+            end
+            if settingsMenu.shaders.scanlines == 0 then
+                settingsMenu.shaders.scanlines = 1
+                Cscln = {0,1,0,1}
+            end
+            if settingsMenu.shaders.scanlines == 2 then
+                settingsMenu.shaders.scanlines = 0
+            end
+            loadShaders()
+        end
+        if select.pos.y == 230 then 
+            if settingsMenu.shaders.sketch == 1 then
+                settingsMenu.shaders.sketch = 2
+                Cskch = {1,1,1,1}
+            end
+            if settingsMenu.shaders.sketch == 0 then
+                settingsMenu.shaders.sketch = 1
+                Cskch = {0,1,0,1}
+            end
+            if settingsMenu.shaders.sketch == 2 then
+                settingsMenu.shaders.sketch = 0
+            end
+            loadShaders()
+        end
+        if select.pos.y == 245 then 
+            if settingsMenu.shaders.vignette == 1 then
+                settingsMenu.shaders.vignette = 2
+                Cv = {1,1,1,1}
+            end
+            if settingsMenu.shaders.vignette == 0 then
+                settingsMenu.shaders.vignette = 1
+                Cv = {0,1,0,1}
+            end
+            if settingsMenu.shaders.vignette == 2 then
+                settingsMenu.shaders.vignette = 0
+            end 
+            loadShaders()
+        end
+    end
+
 end
 
 
@@ -547,9 +757,11 @@ function love.update(dt)
         settings()
     end
     debugger()
-    cam:zoomTo(camera.zoom)
-    if camera.rotate then
+    cam:zoomTo(settingsMenu.camera.zoom)
+    if settingsMenu.camera.rotate == 1 then
         cam:rotateTo(-((p1.angle+90)*pi)/180)
+    else
+        cam:rotateTo(0)
     end
 end
 
@@ -577,7 +789,7 @@ function love.draw()
                 p1.sprite.a:getWidth()/2,
                 p1.sprite.a:getHeight()/2
                 )
-                if gameSettings.seeVectors then
+                if settingsMenu.handling.seeVels == 1 then
                     love.graphics.setColor(1,0,0,1)
                     love.graphics.rectangle("fill",p1.x_pos,p1.y_pos,p1.x_vel*100,2)
                     love.graphics.setColor(0,0,1,1)
@@ -622,6 +834,7 @@ function love.draw()
         love.graphics.print("pixel: "..p1.on,100,200)
         love.graphics.print("checkpoint score: "..p1.check.."/"..heatSettings.map.checkScore,100,220)
         love.graphics.print("select y: "..select.pos.y,100,240)
+        love.graphics.print("camera zoom: "..settingsMenu.camera.zoom,100,260)
     end
 
     -- pausing --
@@ -633,6 +846,45 @@ function love.draw()
         love.graphics.print("back to game",20,60,0,1,1)
         love.graphics.print("settings",20,80,0,1,1)
         love.graphics.print("quit",20,100,0,1,1)
+        love.graphics.print("|",select.pos.x,select.pos.y,0,1,1)
+    end
+
+    if gameSettings.scene == 5 then
+        local hAlpha = 0.5
+        love.graphics.setColor(0,0,0,0.5)
+        love.graphics.rectangle("fill",0,0,vw,vh)
+        love.graphics.setColor(1,1,1,1)
+        love.graphics.print("Settings",20,20,0,2,2)
+
+        love.graphics.setColor(1,1,1,hAlpha)
+        love.graphics.print("Camera",20,60,0,1.5,1.5)
+        
+        love.graphics.setColor(Czoom)
+        love.graphics.print("zoom",20,80,0,1,1)
+        love.graphics.setColor(Crot)
+        love.graphics.print("rotate with player",20,95,0,1,1)
+        
+        love.graphics.setColor(1,1,1,hAlpha)
+        love.graphics.print("Shaders",20,120,0,1.5,1.5)
+        love.graphics.setColor(1,1,1,1)
+        
+        love.graphics.setColor(Cca)
+        love.graphics.print("chromatic abberation",20,140,0,1,1)
+        love.graphics.setColor(Ccrt)
+        love.graphics.print("crt",20,155,0,1,1)
+        love.graphics.setColor(Cfg)
+        love.graphics.print("film grain",20,170,0,1,1)
+        love.graphics.setColor(Cblm)
+        love.graphics.print("bloom",20,185,0,1,1)
+        love.graphics.setColor(Cpxl)
+        love.graphics.print("pixelate",20,200,0,1,1)
+        love.graphics.setColor(Cscln)
+        love.graphics.print("scanlines",20,215,0,1,1)
+        love.graphics.setColor(Cskch)
+        love.graphics.print("sketch",20,230,0,1,1)
+        love.graphics.setColor(Cv)
+        love.graphics.print("vignette",20,245,0,1,1)
+
         love.graphics.print("|",select.pos.x,select.pos.y,0,1,1)
     end
 end
