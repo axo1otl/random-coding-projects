@@ -1,9 +1,9 @@
-debug = true
 debug = false
 
 local moonshine = require 'moonshine'
 
 function love.load() 
+    love.window.setFullscreen(true)
     cam = require "camera"
     cam = cam.new(0,0,0.75,0,damped)
     null = {}
@@ -54,6 +54,20 @@ function love.load()
             checkScore = 0,
             buffer = null
         },
+        overlap = { -- still gotta change the start pos + add checkpoints + track change triggers
+            name = "overlap",
+            startPos = {
+                x = -550,
+                y = -1250,
+            buffer = null
+            },
+            image = love.graphics.newImage("maps/overlap1.png"),
+            trackData = love.image.newImageData("maps/overlap1.png"),
+            image2 = love.graphics.newImage("maps/overlap2.png"),
+            trackData2 = love.image.newImageData("maps/overlap2.png"),
+            checkScore = 0,
+            buffer = null
+        },
         buffer = null
     }
 
@@ -77,7 +91,7 @@ function love.load()
 
     heatSettings = {
         cc = 200, -- 100 144hz 200 60hz
-        map = tracks.tight,
+        map = tracks.overlap,
         ai = false,
         mode = 1, -- 0: normal | 1: drift | 2: ???
         buffer = null
@@ -885,6 +899,7 @@ function love.draw()
         love.graphics.setColor(Cv)
         love.graphics.print("vignette",20,245,0,1,1)
 
+        love.graphics.setColor(1,1,1,1)
         love.graphics.print("|",select.pos.x,select.pos.y,0,1,1)
     end
 end
